@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 from mango.constants import FIGURES_DIR, PROFILE_COLORS
+from mango.content.assignment_guide import SECTIONS
 from mango.interfaces.controller import CustomerValidationError, get_controller
 from mango.visualization import plot_boxplots, plot_clusters, plot_elbow, plot_silhouette
 
@@ -42,6 +43,7 @@ def main() -> None:
         "Muestra el ingreso, las ganas de comprar y la edad, y marca los extremos.",
     )
     _clusters(analysis)
+    _assignment_guide()
     _classify(controller)
 
 
@@ -133,6 +135,21 @@ def _clusters(analysis: dict) -> None:
                 </article>
                 """
             )
+
+
+def _assignment_guide() -> None:
+    st.markdown("## Preguntas del análisis")
+    st.markdown(
+        "Si estás mirando los grupos y quieres saber **cómo llegamos aquí**, estas son las respuestas "
+        "del taller de segmentación con K-Means."
+    )
+    for section in SECTIONS:
+        label = f"{section['part']} — {section['title']}"
+        with st.expander(label, expanded=False):
+            for item in section["items"]:
+                st.markdown(f"**{item['question']}**")
+                st.markdown(item["answer"])
+                st.divider()
 
 
 def _classify(controller) -> None:

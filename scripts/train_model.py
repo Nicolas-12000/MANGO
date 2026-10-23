@@ -17,6 +17,7 @@ from mango.constants import (
     PROCESSED_CSV_PATH,
     TREATMENT_REPORT_PATH,
 )
+from mango.content.assignment_guide import guide_payload
 from mango.orchestration.pipeline import SegmentationOrchestrator
 from mango.visualization import save_figures
 
@@ -31,6 +32,7 @@ def main() -> None:
     _write_json(ANALYSIS_PATH, analysis)
     if FRONTEND_BUNDLE_PATH.parent.parent.exists():
         _write_json(FRONTEND_BUNDLE_PATH, analysis)
+        _write_json(FRONTEND_BUNDLE_PATH.parent / "guide.json", guide_payload())
     figures = save_figures(analysis)
     _publish_figures(figures)
     TREATMENT_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)

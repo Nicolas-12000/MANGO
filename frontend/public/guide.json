@@ -1,0 +1,96 @@
+{
+  "sections": [
+    {
+      "part": "Parte 1",
+      "title": "Exploración de datos",
+      "items": [
+        {
+          "question": "¿Qué variables son más adecuadas para segmentar clientes?",
+          "answer": "Las que sirven para decidir una campaña: cuánto puede gastar una persona y cuánto gasta de verdad. Eso es el ingreso anual y las ganas de comprar.\n\nEl código de cliente no dice nada de su comportamiento. El género no entra en la cuenta, porque K-Means mide distancias y el género no es una escala. Lo miramos después, cuando ya sabemos el grupo. La edad también se cuenta dentro de cada grupo. Si la usamos para partir, los grupos quedan más revueltos."
+        },
+        {
+          "question": "¿Se identifican valores atípicos?",
+          "answer": "Hay extremos, y se quedan.\n\nNo falta ningún dato, no hay personas repetidas y nadie tiene una edad imposible, un ingreso negativo o unas ganas de comprar fuera de 1 a 100. No se eliminó a nadie.\n\nTukey marca solo a dos personas por el ingreso: la 199 y la 200, con 137 mil dólares al año. Mahalanobis señala además a la persona 3. Son esquinas de grupos reales, no errores al anotar. Borrar a las de ingreso alto escondería a quien más le importa a una campaña."
+        },
+        {
+          "question": "¿Qué tipo de relaciones se observan entre las variables?",
+          "answer": "El ingreso y las ganas de comprar casi no se mueven juntos (correlación 0,01). No hay una línea: hay grupos. Por eso tiene más sentido partir en grupos que buscar una recta.\n\nLa edad y las ganas de comprar bajan un poco juntas (−0,33), pero la relación es floja. La edad y el ingreso van cada una por su lado (−0,01). En el mapa se ven cinco manchas, no una nube con pendiente."
+        }
+      ]
+    },
+    {
+      "part": "Parte 2",
+      "title": "Preprocesamiento",
+      "items": [
+        {
+          "question": "¿Por qué es necesario escalar las variables en el algoritmo K-Means?",
+          "answer": "K-Means junta a cada persona con el centro más cercano. Para medir esa cercanía suma las variables como si fueran la misma cosa. No lo son: el ingreso está en miles de dólares y las ganas de comprar son un puntaje de 1 a 100.\n\nUsamos StandardScaler para dejar cada variable con media 0 y desviación 1, y que ninguna gane solo por cómo está medida. Primero elegimos ingreso y ganas de comprar; después las escalamos."
+        }
+      ]
+    },
+    {
+      "part": "Parte 3",
+      "title": "Método del codo",
+      "items": [
+        {
+          "question": "¿Por qué valores cercanos a cero indican mejor ajuste?",
+          "answer": "La inercia dice qué tan sueltos quedan los puntos alrededor de su centro. Más cerca de cero, más apretados. Con un solo grupo arranca en 400; con 5 baja a 65,6; con 10 sigue en 30.\n\nCero solo aparece si cada persona es su propio grupo. Ajusta perfecto y no sirve para una campaña. Un número más chico no siempre es mejor."
+        },
+        {
+          "question": "¿Cómo se identifica el punto óptimo de K?",
+          "answer": "Se busca el codo: donde la curva deja de caer en picada y se aplana. También se calcula el quiebre más marcado entre el primer y el último valor. Cae en 5 grupos.\n\nDe 4 a 5 la inercia baja de 108,9 a 65,6. De 5 a 6 solo baja a 55,1. Partir más ya no aporta."
+        }
+      ]
+    },
+    {
+      "part": "Parte 4",
+      "title": "Coeficiente de silueta",
+      "items": [
+        {
+          "question": "¿Qué mide el coeficiente de silueta?",
+          "answer": "Para cada persona mira dos cosas: qué tan cerca está de la gente de su grupo y qué tan cerca está del grupo de al lado. Si está pegada al suyo y lejos del otro, el número sube. El resultado del modelo es el promedio de todas."
+        },
+        {
+          "question": "¿Qué significa un valor cercano a 1?",
+          "answer": "Los grupos están juntos por dentro y separados entre sí. Aquí el mejor valor es 0,55, con 5 grupos. Se ven claros, sin ser una separación perfecta. En esta página ese número es “qué tan claros”."
+        },
+        {
+          "question": "¿Qué implica un valor cercano a 0 o negativo?",
+          "answer": "Cerca de 0, la persona está en la frontera entre dos grupos. Si el número es negativo, quedó más cerca de otro grupo que del suyo. En este rango lo más flojo es partir en 2, con 0,32. Ningún valor sale negativo."
+        },
+        {
+          "question": "¿Coincide el valor óptimo de K con el método del codo? Justifique.",
+          "answer": "Sí. El codo y la silueta eligen 5. Con 6 grupos la silueta baja un poco, a 0,54.\n\nTambién probamos otras parejas. Edad y ganas de comprar llegan a 0,47; edad e ingreso, a 0,44; las tres juntas, a 0,43. Ingreso y ganas de comprar, con 5 grupos, llegan a 0,55. Por eso el modelo se queda con esas dos."
+        }
+      ]
+    },
+    {
+      "part": "Parte 5",
+      "title": "Modelo K-Means",
+      "items": [
+        {
+          "question": "¿Qué representa cada cluster?",
+          "answer": "El nombre sale de dónde cae el centro del grupo frente al cliente del medio.\n\n**Clientes de alto valor:** ingreso alto y compran mucho.\n\n**Clientes con potencial:** ingreso alto y compran poco.\n\n**Clientes promedio:** en el centro de la base.\n\n**Clientes de presupuesto ajustado:** ingreso bajo y compran mucho para lo que ganan.\n\n**Clientes de bajo valor:** ingreso bajo y compran poco."
+        },
+        {
+          "question": "¿Qué diferencias existen entre los grupos obtenidos?",
+          "answer": "El ingreso parte el mapa en dos: cerca de US$ 26.000 al año, o cerca de US$ 87.000. Dentro de cada lado, las ganas de comprar separan a quien ya compra de quien casi no aparece.\n\nEl promedio es el más grande. El de presupuesto ajustado es el más joven. Ningún grupo es solo de mujeres o solo de hombres (entre 46 % y 61 % de mujeres). Las dos personas de ingreso 137 se quedan: quitarlas casi no mueve el mapa."
+        }
+      ]
+    },
+    {
+      "part": "Parte 6",
+      "title": "Interpretación de negocio",
+      "items": [
+        {
+          "question": "¿Qué estrategias de marketing se podrían aplicar a cada grupo?",
+          "answer": "**Alto valor:** fidelización y servicio personal; evitar descuentos que coman el margen.\n\n**Con potencial:** conversión con experiencias, personal shopper y surtido aspiracional.\n\n**Promedio:** campañas de temporada y venta cruzada moderada; medir antes de subir inversión.\n\n**Presupuesto ajustado:** promos, financiación y formatos accesibles; cuidar el descuento.\n\n**Bajo valor:** precio y surtido básico; no gastar adquisición ahí."
+        },
+        {
+          "question": "¿Qué segmento representa mayor oportunidad de crecimiento?",
+          "answer": "Clientes con potencial: ingreso alto y ganas de comprar bajas. El centro comercial ya los tiene; falta que compren más. Los de alto valor se cuidan: eso es retención, no crecimiento."
+        }
+      ]
+    }
+  ]
+}

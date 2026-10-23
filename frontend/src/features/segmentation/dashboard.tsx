@@ -7,6 +7,7 @@ import { loadAnalysis } from "@/lib/api";
 import { PROFILE_COLOR } from "@/lib/profiles";
 import type { Analysis, ProfileName } from "@/lib/types";
 
+import { AssignmentGuide } from "./assignment-guide";
 import { ClassifyForm } from "./classify-form";
 import { ProfileLegend } from "./charts";
 import { FigureCard } from "./figures";
@@ -123,6 +124,8 @@ export function Dashboard() {
               ))}
             </div>
           </section>
+
+          <AssignmentGuide />
 
           <ClassifyForm analysis={analysis} source={source ?? "bundle"} />
         </>
