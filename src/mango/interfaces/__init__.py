@@ -1,0 +1,1 @@
+"""The single application controller."""
