@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import textwrap
 from html import escape
 
 import matplotlib.pyplot as plt
@@ -20,30 +21,6 @@ ERROR_COPY = {
     "annual_income_k_out_of_bounds": "El ingreso queda fuera de 0 a 500.",
     "spending_score_out_of_bounds": "Las ganas de comprar van de 1 a 100.",
 }
-
-LOGO = """
-<svg viewBox="0 0 72 72" width="72" height="72" aria-hidden="true">
-  <defs>
-    <linearGradient id="mango-skin" x1="18%" y1="8%" x2="82%" y2="96%">
-      <stop offset="0%" stop-color="#F8D36B"/>
-      <stop offset="38%" stop-color="#F08A24"/>
-      <stop offset="100%" stop-color="#C2410C"/>
-    </linearGradient>
-    <linearGradient id="mango-leaf" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#8FBF55"/>
-      <stop offset="100%" stop-color="#2F6B2A"/>
-    </linearGradient>
-  </defs>
-  <path d="M40 20c9-13 24-13 30-3-11 0-20 6-24 15-2-5-4-9-6-12Z" fill="url(#mango-leaf)"/>
-  <path d="M44 16c8-5 16-4 20-1" fill="none" stroke="#245422" stroke-width="1.3" stroke-linecap="round"/>
-  <path d="M39 24c1.2-7 5-12 10-14" fill="none" stroke="#6B3A1F" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M34 22c-14 2-24 14-24 28 0 14 12 24 28 22 16-2 28-16 26-32-2-14-16-22-30-18Z" fill="url(#mango-skin)"/>
-  <path d="M46 34c6 6 8 16 4 26" fill="none" stroke="#9A3412" stroke-width="7" stroke-linecap="round" opacity="0.28"/>
-  <path d="M26 34c1 9 0 18-3 26" fill="none" stroke="#FFF6EE" stroke-width="3.2" stroke-linecap="round" opacity="0.7"/>
-  <circle cx="24" cy="32" r="2.2" fill="#FFF6EE" opacity="0.85"/>
-</svg>
-"""
-
 
 @st.cache_resource
 def load_controller():
@@ -68,19 +45,20 @@ def main() -> None:
     _classify(controller)
 
 
+def _html(markup: str) -> None:
+    st.markdown(textwrap.dedent(markup).strip(), unsafe_allow_html=True)
+
+
 def _header() -> None:
-    st.markdown(
-        f"""
-        <header class="hero">
-          {LOGO}
-          <div>
-            <h1>Mango</h1>
-            <p>Mira qué tipos de cliente tienes y prueba a cuál se parece alguien nuevo, antes de mandarle una campaña.</p>
-          </div>
-        </header>
-        """,
-        unsafe_allow_html=True,
-    )
+    emoji_col, text_col = st.columns([0.1, 0.9], gap="small", vertical_alignment="center")
+    with emoji_col:
+        _html('<p class="mango-emoji" aria-hidden="true">🥭</p>')
+    with text_col:
+        st.title("Mango")
+        st.markdown(
+            "Mira qué tipos de cliente tienes y prueba a cuál se parece alguien nuevo, "
+            "antes de mandarle una campaña."
+        )
 
 
 def _metrics(analysis: dict) -> None:
@@ -94,15 +72,14 @@ def _metrics(analysis: dict) -> None:
     columns = st.columns(4)
     for column, (label, value, hint, compact) in zip(columns, cards, strict=True):
         with column:
-            st.markdown(
+            _html(
                 f"""
                 <article class="card metric">
                   <p class="label">{escape(label)}</p>
                   <p class="{'value-compact' if compact else 'value'}">{escape(value)}</p>
                   <p class="note">{escape(hint)}</p>
                 </article>
-                """,
-                unsafe_allow_html=True,
+                """
             )
 
 
@@ -128,12 +105,11 @@ def _method_figures(analysis: dict) -> None:
 
 def _clusters(analysis: dict) -> None:
     with st.container(border=True):
-        st.markdown(
+        _html(
             """
             <h2 class="panel-title">Los cinco tipos de cliente</h2>
             <p class="note">Cada punto es una persona. A la derecha, quién compra más. Arriba en ingreso, quién puede gastar más. La cruz marca el cliente típico del grupo.</p>
-            """,
-            unsafe_allow_html=True,
+            """
         )
         _image(analysis, "clusters")
     legend = "".join(
@@ -147,7 +123,7 @@ def _clusters(analysis: dict) -> None:
         score = round(cluster["centroid"]["spending_score"])
         color = PROFILE_COLORS[cluster["profile"]]
         with columns[index % 2]:
-            st.markdown(
+            _html(
                 f"""
                 <article class="card profile" style="border-left-color:{color}">
                   <h3>{escape(cluster["headline"])}</h3>
@@ -155,8 +131,7 @@ def _clusters(analysis: dict) -> None:
                   <p class="note">{escape(cluster["description"])}</p>
                   <p class="action"><strong>Qué hacer: </strong>{escape(cluster["strategy"])}</p>
                 </article>
-                """,
-                unsafe_allow_html=True,
+                """
             )
 
 
@@ -232,7 +207,8 @@ def _classify(controller) -> None:
                     f'<p class="warn">{escape(_outside_range(result["outside_training_range"]))} '
                     "El grupo es una aproximación.</p>"
                 )
-            body = f"""
+            _html(
+                f"""
                 <article class="card result">
                   <h2>Su grupo</h2>
                   <p class="result-name" style="color:{color}">{escape(result["headline"])}</p>
@@ -242,14 +218,16 @@ def _classify(controller) -> None:
                   {outside}
                 </article>
                 """
+            )
         else:
-            body = """
+            _html(
+                """
                 <article class="card result">
                   <h2>Su grupo</h2>
                   <p class="body">Escribe a alguien que todavía no está en la base. Te diremos a quién se parece y qué campaña le queda mejor.</p>
                 </article>
                 """
-        st.markdown(body, unsafe_allow_html=True)
+            )
 
     if history:
         rows = "".join(
@@ -261,15 +239,14 @@ def _classify(controller) -> None:
             """
             for item in history
         )
-        st.markdown(
+        _html(
             f"""
             <section class="card history">
               <h2>Consultas guardadas</h2>
               <p class="note">Quedan en esta sesión. Si cierras la pestaña, se borra.</p>
               <ul>{rows}</ul>
             </section>
-            """,
-            unsafe_allow_html=True,
+            """
         )
 
 
@@ -331,9 +308,10 @@ def _css() -> None:
             color: #2C1210;
             margin: 0;
           }
-          .hero { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-          .hero h1 { font-size: 4rem; line-height: 1; letter-spacing: -0.03em; }
-          .hero p, .body { color: #5C3A2E; font-size: 1rem; line-height: 1.6; max-width: 36rem; margin: 0.75rem 0 0; }
+          .mango-emoji { font-size: 3.25rem; line-height: 1; margin: 0; }
+          h1 { font-size: 2.75rem !important; line-height: 1 !important; letter-spacing: -0.03em !important; padding-top: 0 !important; }
+          .block-container p { color: #5C3A2E; }
+          .body { color: #5C3A2E; font-size: 1rem; line-height: 1.6; max-width: 36rem; margin: 0.75rem 0 0; }
           .card {
             background: #FFFBF7;
             border: 1px solid #F0D9C8;
