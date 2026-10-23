@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/* Tokens from DESIGN.md. */
+@theme {
+  --color-primary: #2c1210;
+  --color-on-primary: #fff6ee;
+  --color-secondary: #5c3a2e;
+  --color-tertiary: #c2410c;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #9a3412;
+  --color-neutral: #fff4ea;
+  --color-surface: #fffbf7;
+  --color-outline: #f0d9c8;
+  --color-mark: #e09f3e;
+  --color-positive: #3f6b2a;
+  --color-mora: #9b2335;
+  --color-error: #9f1239;
+  --color-high-value: #c2410c;
+  --color-potential: #9a3412;
+  --color-average: #c4841d;
+  --color-low-value: #6b2d3c;
+  --color-budget: #d4673a;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+  --shadow-focus: 0 1px 2px rgb(44 18 16 / 0.05), 0 16px 36px -16px rgb(44 18 16 / 0.18);
+}
+
+@theme inline {
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+@utility type-hero {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  @variant lg {
+    font-size: 4rem;
+  }
+}
+
+@utility type-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+@utility type-heading {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+@utility type-body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+@utility type-small {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+@utility type-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@utility type-num {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  line-height: 1.4;
+  font-feature-settings: "tnum";
+}
+
+@utility type-num-xl {
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-feature-settings: "tnum";
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-neutral);
+    color: var(--color-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-tertiary);
+    outline-offset: 2px;
+  }
+}
