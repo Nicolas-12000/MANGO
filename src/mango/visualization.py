@@ -35,9 +35,9 @@ def plot_elbow(analysis: dict) -> plt.Figure:
     axis.plot(k_values, inertia, color=PALETTE["mango"], marker="o")
     chosen_inertia = next(point["inertia"] for point in analysis["elbow"] if point["k"] == chosen)
     axis.scatter([chosen], [chosen_inertia], s=90, color=PALETTE["ink"], zorder=3)
-    axis.set_title("Método del codo")
-    axis.set_xlabel("K")
-    axis.set_ylabel("Inertia (WCSS)")
+    axis.set_title("Cuántos grupos conviene usar")
+    axis.set_xlabel("Grupos")
+    axis.set_ylabel("Qué tan sueltos quedan")
     axis.set_xticks(k_values)
     figure.tight_layout()
     return figure
@@ -50,9 +50,9 @@ def plot_silhouette(analysis: dict) -> plt.Figure:
     chosen = analysis["selected_k"]
     colors = [PALETTE["ink"] if k == chosen else PALETTE["mango"] for k in k_values]
     axis.bar(k_values, scores, color=colors)
-    axis.set_title("Coeficiente de silueta")
-    axis.set_xlabel("K")
-    axis.set_ylabel("Silhouette")
+    axis.set_title("Qué tan nítido queda cada corte")
+    axis.set_xlabel("Grupos")
+    axis.set_ylabel("Nitidez")
     axis.set_xticks(k_values)
     figure.tight_layout()
     return figure
@@ -81,9 +81,9 @@ def plot_clusters(analysis: dict) -> plt.Figure:
             marker="X",
             color=PALETTE["ink"],
         )
-    axis.set_title("Segmentos")
-    axis.set_xlabel("annual_income_k")
-    axis.set_ylabel("spending_score")
+    axis.set_title("Los cinco tipos de cliente")
+    axis.set_xlabel("Ingreso anual")
+    axis.set_ylabel("Ganas de comprar")
     axis.legend(frameon=False, fontsize=8)
     figure.tight_layout()
     return figure
@@ -92,8 +92,12 @@ def plot_clusters(analysis: dict) -> plt.Figure:
 def plot_boxplots(analysis: dict) -> plt.Figure:
     frame = pd.DataFrame(analysis["customers"])
     figure, axes = plt.subplots(1, 3, figsize=(9, 3.8))
-    columns = ("age", "annual_income_k", "spending_score")
-    for axis, column in zip(axes, columns, strict=True):
+    columns = (
+        ("age", "Edad"),
+        ("annual_income_k", "Ingreso anual"),
+        ("spending_score", "Ganas de comprar"),
+    )
+    for axis, (column, title) in zip(axes, columns, strict=True):
         axis.boxplot(
             frame[column],
             patch_artist=True,
@@ -103,7 +107,7 @@ def plot_boxplots(analysis: dict) -> plt.Figure:
             capprops={"color": PALETTE["ink"]},
             flierprops={"marker": "o", "markerfacecolor": PALETTE["mango"], "markeredgecolor": PALETTE["ink"]},
         )
-        axis.set_title(column)
+        axis.set_title(title)
         axis.set_xticks([])
     figure.tight_layout()
     return figure

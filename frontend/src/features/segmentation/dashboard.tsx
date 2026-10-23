@@ -68,15 +68,15 @@ export function Dashboard() {
             <FigureCard
               src="/figures/elbow.png"
               title="Cuántos grupos conviene usar"
-              note="Figura del análisis. La curva baja rápido y luego se aplana. El doblez, en 5, es donde partir más ya no aporta."
+              note="La curva baja rápido y luego se aplana. El doblez, en 5, es donde partir más ya no aporta."
             />
             <FigureCard
               src="/figures/silhouette.png"
               title="Qué tan nítido queda cada corte"
               note={
                 analysis.k_selection.methods_agree
-                  ? "Figura del análisis. Con 5 grupos la separación es la mejor, y coincide con la curva de al lado."
-                  : `Figura del análisis. La separación más alta está en ${analysis.k_selection.silhouette_k} grupos.`
+                  ? "Con 5 grupos la separación es la mejor, y coincide con la curva de al lado."
+                  : `La separación más alta está en ${analysis.k_selection.silhouette_k} grupos.`
               }
             />
           </section>
@@ -84,7 +84,7 @@ export function Dashboard() {
           <FigureCard
             src="/figures/boxplots.png"
             title="Cómo se reparte cada variable"
-            note="Figura del análisis. Muestra ingreso, ganas de comprar y edad, y marca los extremos."
+            note="Muestra el ingreso, las ganas de comprar y la edad, y marca los extremos."
           />
 
           <section className="rounded-lg border border-outline bg-surface p-4 sm:p-5">
