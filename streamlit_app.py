@@ -1,24 +1,48 @@
-"""Streamlit deployment. It only talks to the segmentation controller."""
+"""Streamlit deployment. Same screen as the Next dashboard, talking only to the controller."""
 
 from __future__ import annotations
 
+from html import escape
+
 import matplotlib.pyplot as plt
-import pandas as pd
 import streamlit as st
 
-from mango.constants import FIGURES_DIR
+from mango.constants import FIGURES_DIR, PROFILE_COLORS
 from mango.interfaces.controller import CustomerValidationError, get_controller
 from mango.visualization import plot_boxplots, plot_clusters, plot_elbow, plot_silhouette
 
 ERROR_COPY = {
-    "invalid_gender": "El género tiene que ser Female o Male.",
-    "invalid_age": "La edad tiene que ser un entero.",
+    "invalid_gender": "Elige mujer u hombre.",
+    "invalid_age": "La edad tiene que ser un número entero.",
     "invalid_annual_income_k": "El ingreso tiene que ser un número.",
-    "invalid_spending_score": "El spending score tiene que ser un número.",
+    "invalid_spending_score": "Las ganas de comprar tienen que ser un número.",
     "age_out_of_bounds": "La edad queda fuera de 15 a 100.",
     "annual_income_k_out_of_bounds": "El ingreso queda fuera de 0 a 500.",
-    "spending_score_out_of_bounds": "El spending score queda fuera de 1 a 100.",
+    "spending_score_out_of_bounds": "Las ganas de comprar van de 1 a 100.",
 }
+
+LOGO = """
+<svg viewBox="0 0 72 72" width="72" height="72" aria-hidden="true">
+  <defs>
+    <linearGradient id="mango-skin" x1="18%" y1="8%" x2="82%" y2="96%">
+      <stop offset="0%" stop-color="#F8D36B"/>
+      <stop offset="38%" stop-color="#F08A24"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+    <linearGradient id="mango-leaf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8FBF55"/>
+      <stop offset="100%" stop-color="#2F6B2A"/>
+    </linearGradient>
+  </defs>
+  <path d="M40 20c9-13 24-13 30-3-11 0-20 6-24 15-2-5-4-9-6-12Z" fill="url(#mango-leaf)"/>
+  <path d="M44 16c8-5 16-4 20-1" fill="none" stroke="#245422" stroke-width="1.3" stroke-linecap="round"/>
+  <path d="M39 24c1.2-7 5-12 10-14" fill="none" stroke="#6B3A1F" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M34 22c-14 2-24 14-24 28 0 14 12 24 28 22 16-2 28-16 26-32-2-14-16-22-30-18Z" fill="url(#mango-skin)"/>
+  <path d="M46 34c6 6 8 16 4 26" fill="none" stroke="#9A3412" stroke-width="7" stroke-linecap="round" opacity="0.28"/>
+  <path d="M26 34c1 9 0 18-3 26" fill="none" stroke="#FFF6EE" stroke-width="3.2" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="24" cy="32" r="2.2" fill="#FFF6EE" opacity="0.85"/>
+</svg>
+"""
 
 
 @st.cache_resource
@@ -27,151 +51,239 @@ def load_controller():
 
 
 def main() -> None:
-    st.set_page_config(page_title="Mango", page_icon="🥭", layout="wide")
+    st.set_page_config(page_title="Mango", page_icon="🥭", layout="wide", initial_sidebar_state="collapsed")
+    _css()
     controller = load_controller()
     analysis = controller.analysis()
-    _css()
-    st.markdown('<p class="mango-kicker">Centro comercial</p>', unsafe_allow_html=True)
-    st.title("Mango")
-    st.caption("Mira qué tipos de cliente tienes y prueba a cuál se parece alguien nuevo.")
-
-    metrics = st.columns(4)
-    metrics[0].metric("Clientes", analysis["dataset"]["rows"], help="Personas en la base.")
-    metrics[1].metric("Grupos", analysis["selected_k"], help="El número donde los grupos quedan más claros.")
-    metrics[2].metric("Qué tan claros", f"{analysis['model_silhouette']:.2f}", help="1 sería una separación perfecta.")
-    metrics[3].metric("Dónde crecer", "Con potencial", help="Ingreso alto y pocas compras. Ahí hay más margen por ganar.")
-
-    exploration, elbow_tab, segments, classify_tab = st.tabs(
-        ["Exploración", "Codo y silueta", "Segmentos", "Clasificar"]
+    _header()
+    _metrics(analysis)
+    _method_figures(analysis)
+    _figure(
+        analysis,
+        "boxplots",
+        "Cómo se reparte cada variable",
+        "Muestra el ingreso, las ganas de comprar y la edad, y marca los extremos.",
     )
-    with exploration:
-        _exploration(analysis)
-    with elbow_tab:
-        _saved(analysis, "elbow", "Método del codo, figura del análisis.")
-        _saved(analysis, "silhouette", "Coeficiente de silueta, figura del análisis.")
-        rule = analysis["k_selection"]["rule"]
-        agreed = analysis["k_selection"]["methods_agree"]
-        st.write(
-            "La curva se dobla en "
-            f"{analysis['k_selection']['elbow_k']} grupos y la separación más nítida está en "
-            f"{analysis['k_selection']['silhouette_k']}. "
-            + ("Las dos cuentas coinciden." if agreed else f"Se usa la regla {rule}.")
+    _clusters(analysis)
+    _classify(controller)
+
+
+def _header() -> None:
+    st.markdown(
+        f"""
+        <header class="hero">
+          {LOGO}
+          <div>
+            <h1>Mango</h1>
+            <p>Mira qué tipos de cliente tienes y prueba a cuál se parece alguien nuevo, antes de mandarle una campaña.</p>
+          </div>
+        </header>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _metrics(analysis: dict) -> None:
+    silhouette = f"{analysis['model_silhouette']:.2f}".replace(".", ",")
+    cards = [
+        ("Clientes", str(analysis["dataset"]["rows"]), "personas en la base", False),
+        ("Grupos", str(analysis["selected_k"]), "así se separan mejor", False),
+        ("Qué tan claros", silhouette, "1 sería una separación perfecta", False),
+        ("Dónde crecer", analysis["growth_headline"], "el grupo con más margen por ganar", True),
+    ]
+    columns = st.columns(4)
+    for column, (label, value, hint, compact) in zip(columns, cards, strict=True):
+        with column:
+            st.markdown(
+                f"""
+                <article class="card metric">
+                  <p class="label">{escape(label)}</p>
+                  <p class="{'value-compact' if compact else 'value'}">{escape(value)}</p>
+                  <p class="note">{escape(hint)}</p>
+                </article>
+                """,
+                unsafe_allow_html=True,
+            )
+
+
+def _method_figures(analysis: dict) -> None:
+    selection = analysis["k_selection"]
+    if selection["methods_agree"]:
+        silhouette_note = (
+            "Con 5 grupos la separación es la mejor, y coincide con la curva de al lado."
         )
-    with segments:
-        _saved(analysis, "clusters", "Segmentos, figura del análisis.")
-        st.dataframe(_cluster_table(analysis), use_container_width=True, hide_index=True)
-    with classify_tab:
-        _classify(controller)
-
-
-def _exploration(analysis: dict) -> None:
-    summary = pd.DataFrame(analysis["dataset"]["numeric_summary"]).T
-    st.subheader("Resumen numérico")
-    st.dataframe(summary, use_container_width=True)
+    else:
+        silhouette_note = f"La separación más alta está en {selection['silhouette_k']} grupos."
     left, right = st.columns(2)
     with left:
-        st.subheader("Género")
-        st.write(analysis["dataset"]["gender_counts"])
-        st.subheader("Correlación de Pearson")
-        st.dataframe(pd.DataFrame(analysis["dataset"]["correlations"]), use_container_width=True)
+        _figure(
+            analysis,
+            "elbow",
+            "Cuántos grupos conviene usar",
+            "La curva baja rápido y luego se aplana. El doblez, en 5, es donde partir más ya no aporta.",
+        )
     with right:
-        _saved(analysis, "boxplots", "Diagramas de caja, figura del análisis.")
-        quality = analysis["quality"]
-        st.subheader("Anomalías")
-        st.write(
-            f"Colas estadísticas etiquetadas: {quality['statistical_tail_count']}. "
-            f"Política: `{quality['removal_policy']}`."
+        _figure(analysis, "silhouette", "Qué tan nítido queda cada corte", silhouette_note)
+
+
+def _clusters(analysis: dict) -> None:
+    with st.container(border=True):
+        st.markdown(
+            """
+            <h2 class="panel-title">Los cinco tipos de cliente</h2>
+            <p class="note">Cada punto es una persona. A la derecha, quién compra más. Arriba en ingreso, quién puede gastar más. La cruz marca el cliente típico del grupo.</p>
+            """,
+            unsafe_allow_html=True,
         )
-        st.json(
-            {
-                "iqr": {name: detail["count"] for name, detail in quality["iqr_fences"].items()},
-                "modified_z": {name: detail["count"] for name, detail in quality["modified_z"].items()},
-                "mahalanobis": quality["mahalanobis"]["count"],
-            }
-        )
+        _image(analysis, "clusters")
+    legend = "".join(
+        f'<li><span style="background:{PROFILE_COLORS[cluster["profile"]]}"></span>{escape(cluster["headline"])}</li>'
+        for cluster in analysis["clusters"]
+    )
+    st.markdown(f'<ul class="legend">{legend}</ul>', unsafe_allow_html=True)
+    columns = st.columns(2)
+    for index, cluster in enumerate(analysis["clusters"]):
+        income = _money(cluster["centroid"]["annual_income_k"])
+        score = round(cluster["centroid"]["spending_score"])
+        color = PROFILE_COLORS[cluster["profile"]]
+        with columns[index % 2]:
+            st.markdown(
+                f"""
+                <article class="card profile" style="border-left-color:{color}">
+                  <h3>{escape(cluster["headline"])}</h3>
+                  <p class="note">{cluster["size"]} clientes · {escape(income)} al año · compran {score} de 100</p>
+                  <p class="note">{escape(cluster["description"])}</p>
+                  <p class="action"><strong>Qué hacer: </strong>{escape(cluster["strategy"])}</p>
+                </article>
+                """,
+                unsafe_allow_html=True,
+            )
 
 
 def _classify(controller) -> None:
     history = st.session_state.setdefault("classification_history", [])
-    with st.form("classify_customer"):
-        gender = st.selectbox("Género", ["Female", "Male"], format_func=lambda value: "Mujer" if value == "Female" else "Hombre")
-        age = st.number_input("Edad", min_value=15, max_value=100, value=35, step=1, help="No cambia el grupo.")
-        annual_income_k = st.number_input(
-            "Ingreso anual (miles de dólares)",
-            min_value=0.0,
-            max_value=500.0,
-            value=70.0,
-            help="70 significa unos 70.000 dólares al año.",
-        )
-        spending_score = st.number_input(
-            "Ganas de comprar (1 a 100)",
-            min_value=1.0,
-            max_value=100.0,
-            value=50.0,
-            help="100 es quien más compra.",
-        )
-        submitted = st.form_submit_button("Ver a qué grupo pertenece")
-    if submitted:
-        try:
-            result = controller.classify(
-                {
-                    "gender": gender,
-                    "age": int(age),
-                    "annual_income_k": float(annual_income_k),
-                    "spending_score": float(spending_score),
-                }
+    form_col, result_col = st.columns(2)
+    with form_col:
+        with st.container(border=True):
+            st.markdown('<h2 class="panel-title">Probar un cliente</h2>', unsafe_allow_html=True)
+            st.markdown(
+                '<p class="note">La edad y el género nos ayudan a imaginarlo. El grupo lo deciden el ingreso y las ganas de comprar.</p>',
+                unsafe_allow_html=True,
             )
-        except CustomerValidationError as exc:
-            st.error(ERROR_COPY.get(exc.code, exc.code))
-        else:
-            st.subheader(result["headline"])
-            st.write(result["description"])
-            st.write("Qué hacer: " + result["strategy"])
-            distance = result["distance_to_centroid"]
-            if distance < 0.35:
-                st.write("Encaja de lleno en este grupo.")
-            elif distance < 1:
-                st.write("Está cerca del cliente típico de este grupo.")
+            with st.form("classify_customer"):
+                gender = st.selectbox(
+                    "Género",
+                    ["Female", "Male"],
+                    format_func=lambda value: "Mujer" if value == "Female" else "Hombre",
+                )
+                age = st.number_input("Edad", min_value=15, max_value=100, value=35, step=1, help="Años cumplidos.")
+                annual_income_k = st.number_input(
+                    "Ingreso anual",
+                    min_value=0.0,
+                    max_value=500.0,
+                    value=70.0,
+                    help="En miles de dólares. 70 significa unos US$ 70.000 al año.",
+                )
+                spending_score = st.number_input(
+                    "Ganas de comprar",
+                    min_value=1.0,
+                    max_value=100.0,
+                    value=50.0,
+                    help="De 1 a 100. 100 es quien más compra en la tienda.",
+                )
+                submitted = st.form_submit_button("Ver a qué grupo pertenece", type="primary", use_container_width=True)
+        if submitted:
+            try:
+                result = controller.classify(
+                    {
+                        "gender": gender,
+                        "age": int(age),
+                        "annual_income_k": float(annual_income_k),
+                        "spending_score": float(spending_score),
+                    }
+                )
+            except CustomerValidationError as exc:
+                st.session_state["classification_error"] = ERROR_COPY.get(exc.code, exc.code)
             else:
-                st.write("Queda hacia el borde del grupo. Conviene mirarlo con calma.")
+                st.session_state["classification_error"] = None
+                st.session_state["last_classification"] = result
+                history.insert(
+                    0,
+                    {
+                        "gender": "Mujer" if gender == "Female" else "Hombre",
+                        "age": int(age),
+                        "annual_income_k": float(annual_income_k),
+                        "spending_score": float(spending_score),
+                        "headline": result["headline"],
+                        "profile": result["profile"],
+                    },
+                )
+                del history[12:]
+        if st.session_state.get("classification_error"):
+            st.error(st.session_state["classification_error"])
+
+    with result_col:
+        result = st.session_state.get("last_classification")
+        if result:
+            color = PROFILE_COLORS[result["profile"]]
+            outside = ""
             if result["outside_training_range"]:
-                st.warning("Este cliente se sale de lo que ya hemos visto. El grupo es una aproximación.")
-            history.insert(
-                0,
-                {
-                    "Género": "Mujer" if gender == "Female" else "Hombre",
-                    "Edad": int(age),
-                    "Ingreso (miles)": float(annual_income_k),
-                    "Ganas de comprar": float(spending_score),
-                    "Grupo": result["headline"],
-                },
-            )
-            del history[12:]
+                outside = (
+                    f'<p class="warn">{escape(_outside_range(result["outside_training_range"]))} '
+                    "El grupo es una aproximación.</p>"
+                )
+            body = f"""
+                <article class="card result">
+                  <h2>Su grupo</h2>
+                  <p class="result-name" style="color:{color}">{escape(result["headline"])}</p>
+                  <p class="body">{escape(result["description"])}</p>
+                  <p class="body"><strong>Qué hacer: </strong>{escape(result["strategy"])}</p>
+                  <p class="note">{escape(_fit_label(result["distance_to_centroid"]))}</p>
+                  {outside}
+                </article>
+                """
+        else:
+            body = """
+                <article class="card result">
+                  <h2>Su grupo</h2>
+                  <p class="body">Escribe a alguien que todavía no está en la base. Te diremos a quién se parece y qué campaña le queda mejor.</p>
+                </article>
+                """
+        st.markdown(body, unsafe_allow_html=True)
+
     if history:
-        st.subheader("Historial de esta sesión")
-        st.caption("Se guarda en la sesión de Streamlit. Si cierras la pestaña, se borra.")
-        st.dataframe(pd.DataFrame(history), use_container_width=True, hide_index=True)
-
-
-def _cluster_table(analysis: dict) -> pd.DataFrame:
-    rows = []
-    for cluster in analysis["clusters"]:
-        rows.append(
-            {
-                "Grupo": cluster["headline"],
-                "Clientes": cluster["size"],
-                "Ingreso (miles)": round(cluster["centroid"]["annual_income_k"], 1),
-                "Ganas de comprar": round(cluster["centroid"]["spending_score"], 1),
-                "Edad media": round(cluster["mean_age"], 1),
-            }
+        rows = "".join(
+            f"""
+            <li>
+              <span>{escape(item["gender"])}, {item["age"]} años · ingreso {item["annual_income_k"]:g} mil · compra {item["spending_score"]:g}</span>
+              <strong style="color:{PROFILE_COLORS[item["profile"]]}">{escape(item["headline"])}</strong>
+            </li>
+            """
+            for item in history
         )
-    return pd.DataFrame(rows)
+        st.markdown(
+            f"""
+            <section class="card history">
+              <h2>Consultas guardadas</h2>
+              <p class="note">Quedan en esta sesión. Si cierras la pestaña, se borra.</p>
+              <ul>{rows}</ul>
+            </section>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
-def _saved(analysis: dict, name: str, caption: str) -> None:
+def _figure(analysis: dict, name: str, title: str, note: str) -> None:
+    with st.container(border=True):
+        st.markdown(f'<p class="label">{escape(title)}</p>', unsafe_allow_html=True)
+        _image(analysis, name)
+        st.markdown(f'<p class="note">{escape(note)}</p>', unsafe_allow_html=True)
+
+
+def _image(analysis: dict, name: str) -> None:
     path = FIGURES_DIR / f"{name}.png"
     if path.exists():
-        st.image(str(path), caption=caption, use_container_width=True)
+        st.image(str(path), use_container_width=True)
         return
     fallback = {
         "elbow": plot_elbow,
@@ -179,26 +291,118 @@ def _saved(analysis: dict, name: str, caption: str) -> None:
         "clusters": plot_clusters,
         "boxplots": plot_boxplots,
     }[name]
-    _show(fallback(analysis))
-
-
-def _show(figure) -> None:
+    figure = fallback(analysis)
     st.pyplot(figure)
     plt.close(figure)
+
+
+def _money(thousands: float) -> str:
+    amount = round(thousands * 1000)
+    grouped = f"{amount:,}".replace(",", ".")
+    return f"US$ {grouped}"
+
+
+def _fit_label(distance: float) -> str:
+    if distance < 0.35:
+        return "Encaja de lleno en este grupo."
+    if distance < 1:
+        return "Está cerca del cliente típico de este grupo."
+    return "Queda hacia el borde del grupo. Conviene mirarlo con calma."
+
+
+def _outside_range(fields: list[str]) -> str:
+    names = ["el ingreso" if field == "annual_income_k" else "las ganas de comprar" for field in fields]
+    return f"No tenemos clientes con {' ni '.join(names)} tan extremos."
 
 
 def _css() -> None:
     st.markdown(
         """
         <style>
+          @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;600&display=swap");
+          html, body, [class*="css"] { font-family: "IBM Plex Sans", system-ui, sans-serif; }
           .stApp { background: #FFF4EA; color: #2C1210; }
-          .mango-kicker {
-            color: #C2410C; font-size: 0.75rem; letter-spacing: 0.08em;
-            text-transform: uppercase; margin-bottom: 0;
+          header[data-testid="stHeader"], #MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none; }
+          .block-container { max-width: 72rem; padding-top: 2rem; padding-bottom: 4rem; }
+          h1, h2, h3, .panel-title {
+            font-family: Fraunces, Georgia, serif;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: #2C1210;
+            margin: 0;
           }
-          div[data-testid="stMetric"] {
-            background: #FFFBF7; border: 1px solid #F0D9C8; border-radius: 14px; padding: 8px 12px;
+          .hero { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+          .hero h1 { font-size: 4rem; line-height: 1; letter-spacing: -0.03em; }
+          .hero p, .body { color: #5C3A2E; font-size: 1rem; line-height: 1.6; max-width: 36rem; margin: 0.75rem 0 0; }
+          .card {
+            background: #FFFBF7;
+            border: 1px solid #F0D9C8;
+            border-radius: 14px;
+            padding: 1rem 1.1rem 1.15rem;
+            margin-bottom: 0.75rem;
           }
+          .label {
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+            font-size: 0.6875rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #5C3A2E;
+            margin: 0;
+          }
+          .value, .value-compact {
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+            color: #2C1210;
+            margin: 0.45rem 0 0;
+            line-height: 1;
+          }
+          .value { font-size: 2.5rem; }
+          .value-compact { font-family: Fraunces, Georgia, serif; font-size: 1.5rem; font-weight: 600; }
+          .note { color: #5C3A2E; font-size: 0.875rem; line-height: 1.5; margin: 0.55rem 0 0; }
+          .figure { margin-bottom: 0.35rem; padding-bottom: 0.4rem; }
+          .figure-note { margin-top: 0; margin-bottom: 1rem; }
+          .cluster-intro h2, .profile h3, .result h2, .history h2 { font-size: 1.5rem; }
+          .profile { border-left: 4px solid #C2410C; min-height: 11rem; }
+          .action { font-size: 0.875rem; margin: 0.55rem 0 0; }
+          .legend { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; list-style: none; padding: 0.25rem 0 1rem; margin: 0; }
+          .legend li { display: flex; align-items: center; gap: 0.45rem; color: #5C3A2E; font-size: 0.875rem; }
+          .legend span { width: 0.7rem; height: 0.7rem; border-radius: 999px; display: inline-block; }
+          .result-name {
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            margin: 1rem 0 0;
+          }
+          .warn { color: #9F1239; font-size: 0.875rem; margin-top: 0.75rem; }
+          .history ul { list-style: none; padding: 0; margin: 0.8rem 0 0; }
+          .history li {
+            display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+            border-bottom: 1px solid #F0D9C8; padding: 0.55rem 0; font-size: 0.875rem;
+          }
+          div[data-testid="stVerticalBlockBorderWrapper"] {
+            background: #FFFBF7;
+            border: 1px solid #F0D9C8 !important;
+            border-radius: 14px;
+            padding: 0.4rem 0.8rem 0.8rem;
+          }
+          div[data-testid="stForm"] { border: 0; padding: 0; }
+          .stTextInput input, .stNumberInput input, div[data-baseweb="select"] > div {
+            background: #FFFBF7;
+            border-color: #F0D9C8;
+            color: #2C1210;
+            min-height: 3rem;
+            border-radius: 8px;
+          }
+          .stFormSubmitButton button {
+            background: #C2410C;
+            color: #FFFFFF;
+            border: 0;
+            border-radius: 8px;
+            min-height: 3rem;
+            font-weight: 600;
+          }
+          .stFormSubmitButton button:hover { background: #9A3412; color: #FFFFFF; }
+          [data-testid="stImage"] img { border-radius: 8px; background: #FFF4EA; }
         </style>
         """,
         unsafe_allow_html=True,
