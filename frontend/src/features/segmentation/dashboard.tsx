@@ -34,23 +34,15 @@ export function Dashboard() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex items-center gap-4">
+        <Logo className="size-16 shrink-0 sm:size-20" />
         <div>
-          <p className="type-label text-tertiary">Centro comercial</p>
-          <div className="mt-3 flex items-center gap-4">
-            <Logo className="size-16 shrink-0 sm:size-20" />
-            <div>
-              <h1 className="type-hero">Mango</h1>
-              <p className="type-body mt-3 max-w-xl text-secondary">
-                Mira qué tipos de cliente tienes y prueba a cuál se parece alguien nuevo, antes de
-                mandarle una campaña.
-              </p>
-            </div>
-          </div>
+          <h1 className="type-hero">Mango</h1>
+          <p className="type-body mt-3 max-w-xl text-secondary">
+            Mira qué tipos de cliente tienes y prueba a cuál se parece alguien nuevo, antes de
+            mandarle una campaña.
+          </p>
         </div>
-        <p className="type-small shrink-0 rounded-full border border-outline bg-surface px-3 py-2 text-secondary">
-          {source === "api" ? "Datos en vivo" : source === "bundle" ? "Datos listos" : "Cargando"}
-        </p>
       </header>
 
       {error ? <p className="type-body text-error">{error}</p> : null}
